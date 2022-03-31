@@ -1,0 +1,105 @@
+
+Hola Robert.
+
+Por favor realiza estos cambios:
+
+1. Abre en la laptop la aplicación: dbeaver-ce
+2. Conéctate a la bd TomiDB
+3. Borra la tabla StockAdjustment (a mano en el panel de tablas, click derecho y delete)
+4. Saca con click derecho sobre la tabla StockAdjustment --> Generate SQL-->DDL un respaldo de la estructura actual
+5. Corre la creación de la tabla otra vez con el siguinte DDL:
+
+CREATE TABLE TomiDB.dbo.StockAdjustment (
+Id uniqueidentifier NOT NULL,
+Empno nvarchar(6) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+Rec int NULL,
+Term nvarchar(10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+Dload int NULL,
+Tag int NULL,
+Shelf int NULL,
+Barcode nvarchar(14) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+SKU nvarchar(6) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+NOF tinyint NOT NULL,
+Department int NULL,
+Quantity int NULL,
+Isdeleted bit NOT NULL,
+CreatedAt datetimeoffset NULL,
+UpdatedAt datetimeoffset NULL,
+DeletedAt datetimeoffset NULL,
+CreatedBy nvarchar(6) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+UpdatedBy datetimeoffset NULL,
+Deletedby datetimeoffset NULL,
+IsActive bit NOT NULL,
+CONSTRAINT PK_StockAdjustment PRIMARY KEY (Id)
+);
+ CREATE NONCLUSTERED INDEX IX_StockAdjustment_SKU ON dbo.StockAdjustment (  SKU ASC  )  
+WITH (  PAD_INDEX = OFF ,FILLFACTOR = 100  ,SORT_IN_TEMPDB = OFF , IGNORE_DUP_KEY = OFF , STATISTICS_NORECOMPUTE = OFF , ONLINE = OFF , ALLOW_ROW_LOCKS = ON , ALLOW_PAGE_LOCKS = ON  )
+ON [PRIMARY ] ;
+
+
+-- TomiDB.dbo.StockAdjustment foreign keys
+
+ALTER TABLE TomiDB.dbo.StockAdjustment ADD CONSTRAINT FK_StockAdjustment_OrderJob_SKU FOREIGN KEY (SKU) REFERENCES TomiDB.dbo.OrderJob(Id) ON DELETE CASCADE;
+
+6. Crea el siguiente trigger:
+CREATE TRIGGER trg_StockAdjustment
+ON Terminal_Smf
+AFTER INSERT
+AS
+IF EXISTS (select * from Terminal_Smf tsf where INOUT = 'In')
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO TomiDB.dbo.StockAdjustment
+    (
+    Id,
+Empno,
+Rec,
+Term,
+Dload,
+Tag,
+Shelf,
+Barcode,
+SKU,
+NOF,
+Department,
+Quantity,
+Isdeleted,
+CreatedAt,
+UpdatedAt,
+DeletedAt,
+CreatedBy,
+UpdatedBy,
+Deletedby,
+IsActive
+    )
+    SELECT
+        NEWID(),
+        '4001GA',
+        1,
+        'term01',
+        1,
+        i.tag,
+        i.Shelf,
+        i.Code,
+        (select DISTINCT (SKU) from TomiDB.dbo.OrderJob JO where JO.Code = i.Code),
+        0,
+        i.Department,
+        i.total_counted,
+        0,
+        GETDATE(),
+        GETDATE(),
+        GETDATE(),
+        '4001GA',
+        GETDATE(),
+        GETDATE(),
+        1
+    FROM
+        inserted i
+END
+
+7. Que corran conteos, pero que por favor utilicen departamentos que existen en la tabla de departamentos, si no no funciona prque tiene un constraint
+8. DEspues de contar en la terminal y hacer send data, la tabla StockAdjustment debe tener la data.
+9. Despues de los cambios en la estructura, la pantalla de ajustes no fucniona porque cambiaron los tipos de datos. Esto se corregira en el siguiente deploy.
+
+Saludos.
+
